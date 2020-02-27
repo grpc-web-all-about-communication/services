@@ -13,7 +13,7 @@ spec:
     spec:
       containers:
         - name: leaderboard
-          image: gcr.io/$GCP_PROJECT/leaderboard:latest
+          image: gcr.io/$GCP_PROJECT/grpcweb-leaderboard:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8080

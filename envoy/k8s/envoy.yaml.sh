@@ -13,7 +13,7 @@ spec:
     spec:
       containers:
         - name: envoy
-          image: gcr.io/$GCP_PROJECT/envoy:latest
+          image: gcr.io/$GCP_PROJECT/grpcweb-envoy:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
