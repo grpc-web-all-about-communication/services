@@ -3,20 +3,20 @@ cat <<YAML
 apiVersion: apps/v1beta1
 kind: Deployment
 metadata:
-  name: geese
+  name: clouds
 spec:
   replicas: 1
   template:
     metadata:
       labels:
-        app: geese
+        app: clouds
     spec:
       containers:
-        - name: geese
-          image: gcr.io/$GCP_PROJECT/geese:latest
+        - name: clouds
+          image: gcr.io/$GCP_PROJECT/grpcweb-clouds:latest
           imagePullPolicy: Always
           ports:
-            - containerPort: 8090
+            - containerPort: 8100
           env:
             - name: foobar
               value: "$(date +%s)"
@@ -30,14 +30,14 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: geese
+  name: clouds
 spec:
   type: LoadBalancer
   selector:
-    app: geese
+    app: clouds
   ports:
-   - port: 8090
-     targetPort: 8090
+   - port: 8100
+     targetPort: 8100
      protocol: TCP
      name: grpc
 YAML

@@ -13,7 +13,7 @@ spec:
     spec:
       containers:
         - name: gateway
-          image: gcr.io/$GCP_PROJECT/gateway:latest
+          image: gcr.io/$GCP_PROJECT/grpcweb-gateway:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8080

@@ -13,7 +13,7 @@ spec:
     spec:
       containers:
         - name: ui
-          image: gcr.io/$GCP_PROJECT/ui:latest
+          image: gcr.io/$GCP_PROJECT/grpcweb-ui:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8100
