@@ -58,6 +58,7 @@ shadowJar {
     baseName = 'clouds'
     classifier = ''
     archiveVersion = ''
+    mergeServiceFiles()
 }
 
 apply from: '../common/common.gradle'

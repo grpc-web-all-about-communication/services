@@ -62,7 +62,7 @@ shadowJar {
     baseName = 'geese'
     classifier = ''
     archiveVersion = ''
-    shouldRunAfter build
+    mergeServiceFiles()
 }
 
 apply from: '../common/common.gradle'
