@@ -13,7 +13,7 @@ spec:
     spec:
       containers:
         - name: playerid
-          image: gcr.io/$GCP_PROJECT/playerid:latest
+          image: gcr.io/$GCP_PROJECT/grpcweb-playerid:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8110

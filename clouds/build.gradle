@@ -5,12 +5,17 @@ buildscript {
     repositories {
         maven {
             url "https://maven-central.storage-download.googleapis.com/repos/central/data/"
+            jcenter()
         }
     }
     dependencies {
         classpath 'com.google.protobuf:protobuf-gradle-plugin:0.8.5'
+        classpath 'com.github.jengelman.gradle.plugins:shadow:5.2.0'
+
     }
 }
+
+apply plugin: 'com.github.johnrengelman.shadow'
 
 repositories {
     maven {
@@ -47,16 +52,14 @@ apply plugin: 'application'
 
 startScripts.enabled = false
 
-def mainClassName = "xyz.breakit.clouds.CloudsServer"
+mainClassName = "xyz.breakit.clouds.CloudsServer"
 
-jar {
-    manifest {
-        attributes "Main-Class": "${mainClassName}"
-    }
-
-    from {
-        configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }
-    }
+shadowJar {
+    baseName = 'clouds'
+    classifier = ''
+    archiveVersion = ''
 }
 
 apply from: '../common/common.gradle'
+
+buildDocker.dependsOn 'shadowJar'
