@@ -44,7 +44,7 @@
     "express": "^4.13.1",
     "google-protobuf": "^3.6.1",
     "grpc-web": "1.0.6",
-    "node-sass": "^4.12.0",
+    "node-sass": "^4.13.1",
     "pixi.js": "^4.8.2",
     "preact": "^8.5.2",
     "preact-compat": "^3.19.0",
