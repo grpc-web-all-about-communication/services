@@ -1,6 +1,7 @@
 FROM node
 WORKDIR /
 ADD ./dist dist
+ADD .env .
 ADD ./package.json .
 
 RUN npm i yarn && yarn global add serve;

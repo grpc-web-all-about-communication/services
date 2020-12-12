@@ -5,18 +5,21 @@ buildscript {
     repositories {
         maven {
             url "https://maven-central.storage-download.googleapis.com/repos/central/data/"
+            jcenter()
         }
     }
     dependencies {
         classpath 'com.google.protobuf:protobuf-gradle-plugin:0.8.5'
+        classpath 'com.github.jengelman.gradle.plugins:shadow:5.2.0'
+
     }
 }
 
+apply plugin: 'com.github.johnrengelman.shadow'
+
 repositories {
     maven {
-        url "https://maven-central.stor" +
-                "" +
-                "age-download.googleapis.com/repos/central/data/"
+        url "https://maven-central.storage-download.googleapis.com/repos/central/data/"
     }
     jcenter()
     mavenLocal()
@@ -53,16 +56,15 @@ apply plugin: 'application'
 
 startScripts.enabled = false
 
-def mainClassName = "xyz.breakit.geese.GeeseServer"
+mainClassName = "xyz.breakit.geese.GeeseServer"
 
-jar {
-    manifest {
-        attributes "Main-Class": "${mainClassName}"
-    }
-
-    from {
-        configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }
-    }
+shadowJar {
+    baseName = 'geese'
+    classifier = ''
+    archiveVersion = ''
+    mergeServiceFiles()
 }
 
 apply from: '../common/common.gradle'
+
+buildDocker.dependsOn 'shadowJar'

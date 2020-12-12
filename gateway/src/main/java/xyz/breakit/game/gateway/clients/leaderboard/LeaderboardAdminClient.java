@@ -3,11 +3,15 @@ package xyz.breakit.game.gateway.clients.leaderboard;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.protobuf.util.Durations;
+import net.jodah.failsafe.Failsafe;
+import net.jodah.failsafe.RetryPolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cloud.sleuth.instrument.async.TraceableScheduledExecutorService;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.ClientResponse;
@@ -24,22 +28,34 @@ import xyz.breakit.game.leaderboard.UpdateScoreResponse;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 
 @Service
 public class LeaderboardAdminClient {
 
     private static final Logger LOG = LoggerFactory.getLogger(LeaderboardAdminClient.class);
 
+    private static final ScheduledThreadPoolExecutor EXECUTOR = new ScheduledThreadPoolExecutor(Runtime.getRuntime().availableProcessors());
+
+    private final static RetryPolicy NO_RETRY_POLICY = new RetryPolicy()
+            .retryOn(Throwable.class)
+            .withMaxRetries(0);
+
     private final String leaderboardUrl;
     private final WebClient httpClient;
     private final LeaderboardServiceFutureStub leaderboardServiceFutureStub;
+    private final BeanFactory beanFactory;
+
 
     @Autowired
     public LeaderboardAdminClient(
             @Value("${rest.leaderboard.host:leaderboard}") String leaderboardHost,
             @Value("${rest.leaderboard.port:8080}") int leaderboardPort,
             @Qualifier("tracingWebClient") WebClient webClientTemplate,
-            LeaderboardServiceFutureStub leaderboardServiceFutureStub) {
+            LeaderboardServiceFutureStub leaderboardServiceFutureStub,
+            BeanFactory beanFactory
+    ) {
+        this.beanFactory = beanFactory;
         this.leaderboardUrl = "http://" + leaderboardHost + ":" + leaderboardPort;
         LOG.info("LB URL: {}", leaderboardUrl);
 
@@ -48,17 +64,20 @@ public class LeaderboardAdminClient {
     }
 
     public CompletableFuture<HealthCheckResponse> health() {
-        return httpClient
-                .get()
-                .uri("/admin/health")
-                .exchange()
-                .timeout(Duration.ofMillis(500))
-                .doOnNext(this::checkStatusCode)
-                .flatMap(cr -> cr.bodyToMono(Health.class))
-                .map(this::toServiceHealthCheckStatus)
-                .map(status ->
-                        HealthCheckResponse.newBuilder().addServiceHealthStatus(status).build())
-                .toFuture();
+        return Failsafe
+                .with(NO_RETRY_POLICY)
+                .with(new TraceableScheduledExecutorService(beanFactory, EXECUTOR))
+                .future(() -> httpClient
+                        .get()
+                        .uri("/admin/health")
+                        .exchange()
+                        .timeout(Duration.ofMillis(500))
+                        .doOnNext(this::checkStatusCode)
+                        .flatMap(cr -> cr.bodyToMono(Health.class))
+                        .map(this::toServiceHealthCheckStatus)
+                        .map(status ->
+                                HealthCheckResponse.newBuilder().addServiceHealthStatus(status).build())
+                        .toFuture());
     }
 
     private ServiceHealthCheckStatus toServiceHealthCheckStatus(Health health) {
@@ -111,19 +130,21 @@ public class LeaderboardAdminClient {
     }
 
     private CompletableFuture<Void> makeRestCall(String s) {
-        return httpClient
-                .post()
-                .uri(s)
-                .contentType(MediaType.APPLICATION_JSON)
-                .exchange()
-                .timeout(Duration.ofMillis(500))
-                .doOnNext(this::checkStatusCode)
-                .flatMap(cr -> cr.bodyToMono(String.class))
-                .then().toFuture();
+        return Failsafe
+                .with(NO_RETRY_POLICY)
+                .with(new TraceableScheduledExecutorService(beanFactory, EXECUTOR))
+                .future(() -> httpClient
+                        .post()
+                        .uri(s)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .exchange()
+                        .timeout(Duration.ofMillis(500))
+                        .doOnNext(this::checkStatusCode)
+                        .flatMap(cr -> cr.bodyToMono(String.class))
+                        .then().toFuture());
     }
 
     private Future<?> setStrangeLeaderboard() {
-
         ListenableFuture<UpdateScoreResponse> madmax =
                 leaderboardServiceFutureStub.updateScore(UpdateScoreRequest.newBuilder()
                         .setPlayerScore(PlayerScore.newBuilder().setPlayerId("MADMAX")

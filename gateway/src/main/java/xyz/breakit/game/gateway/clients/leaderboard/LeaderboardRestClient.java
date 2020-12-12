@@ -4,9 +4,11 @@ import net.jodah.failsafe.Failsafe;
 import net.jodah.failsafe.RetryPolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cloud.sleuth.instrument.async.TraceableScheduledExecutorService;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
@@ -38,13 +40,16 @@ public class LeaderboardRestClient {
     private final String leaderboardUrl;
     private final WebClient httpClient;
     private RetryPolicy currentRetryPolicy;
+    private final BeanFactory beanFactory;
 
     @Autowired
     public LeaderboardRestClient(
             @Value("${rest.leaderboard.host:leaderboard}") String leaderboardHost,
             @Value("${rest.leaderboard.port:8080}") int leaderboardPort,
-            @Qualifier("tracingWebClient") WebClient webClientTemplate
+            @Qualifier("tracingWebClient") WebClient webClientTemplate,
+            BeanFactory beanFactory
     ) {
+        this.beanFactory = beanFactory;
         this.leaderboardUrl = "http://" + leaderboardHost + ":" + leaderboardPort;
         LOG.info("LB URL: {}", leaderboardUrl);
 
@@ -64,23 +69,9 @@ public class LeaderboardRestClient {
     public CompletableFuture<List<LeaderboardEntry>> top5() {
         return Failsafe
                 .with(currentRetryPolicy)
-                .with(EXECUTOR)
+                .with(new TraceableScheduledExecutorService(beanFactory, EXECUTOR))
                 .onFailedAttempt(t -> LOG.error("Error fetching top 5", t))
                 .future(() -> top5Request().toFuture());
-    }
-
-    public void updateScore(LeaderboardEntry newScore,
-                            Runnable onMessage,
-                            Consumer<? super Throwable> onError,
-                            Runnable onComplete) {
-        httpClient
-                .post()
-                .uri("/scores/")
-                .contentType(MediaType.APPLICATION_JSON)
-                .syncBody(newScore)
-                .exchange()
-                .timeout(Duration.ofMillis(500))
-                .subscribe(resp -> onMessage.run(), onError, onComplete);
     }
 
     private Mono<List<LeaderboardEntry>> top5Request() {
